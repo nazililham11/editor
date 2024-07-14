@@ -66,17 +66,18 @@
         // 
         function createSettingTab(){
             const settingsTab = tabContainer.create('Settings')
-            const setting = Setting(settingsTab.body)
+            const body = Setting(settingsTab.body)
 
             if (tabContainer.length() == 1){
                 settingsTab.open()
             }
 
-            return { tab: settingsTab, setting }
+            return { tab: settingsTab, body }
         }
         function createEditorTab(config){
-            
-            const tab = tabContainer.create(config.title ?? 'Untitled')
+            const title = config.title ?? 'Untitled'
+
+            const tab = tabContainer.create(title)
             const editor = Editor({ 
                 ...(DEFAULT_TAB_CONFIG.editor ?? {}), 
                 ...(config.editor ?? {}),
@@ -85,7 +86,7 @@
                     ...(config?.editor?.addons ?? [])
                 ]
             })
-
+            
             function onChange(data) {
                 if (editor.getCodemirror()){
                     editor.getCodemirror().setValue(data ?? '')
@@ -121,20 +122,31 @@
 
             if (tabContainer.length() == 1) tab.open()
 
-            return { tab, editor, data, save }
+            return { tab, editor, data, title, config, save }
         }
 
+        const tabs = [
+            createEditorTab({ title: 'Editor 1', store: { path: 'editor1' } }),
+            createEditorTab({ 
+                title: 'Editor 2', 
+                editor: { mode: 'text/markdown' }, 
+                store: { path: 'editor2' } 
+            }),
+            createEditorTab({ title: 'Editor 3', store: { path: 'editor3' } }),
+            createEditorTab({ title: 'Editor 4', store: { path: 'editor4' } }),
+        ]
         
-        createEditorTab({ title: 'Editor 1', store: { path: 'editor1' } })
-        createEditorTab({ 
-            title: 'Editor 2', 
-            editor: { mode: 'text/markdown' }, 
-            store: { path: 'editor2' } 
-        })
-        createEditorTab({ title: 'Editor 3', store: { path: 'editor3' } })
-        createEditorTab({ title: 'Editor 4', store: { path: 'editor4' } })
+        const setting = createSettingTab()
+        setting.body.append(document.createElement('br'))
         
-        createSettingTab()
+        for (const tab of tabs){
+            const button = document.createElement('button')
+            button.innerHTML = 'Save ' + tab.title
+            button.onclick = () => tab.save()
+            
+            setting.body.append(button)
+            setting.body.append(document.createElement('br'))
+        }
        
         spinner.hide()
         
