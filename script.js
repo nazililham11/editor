@@ -5,16 +5,8 @@
     const { Firebase }     = await import('./Firebase.mjs')
     const { Spinner }      = await import('./Spinner.mjs')
     const { TabConainer }  = await import('./TabContainer.mjs')
-    
-    const FIREBASE_CONFIG = {
-        apiKey: "",
-        authDomain: "",
-        databaseURL: "",
-        projectId: "",
-        storageBucket: "",
-        messagingSenderId: "",
-        appId: "",
-    }
+
+    const FIREBASE_CONFIG   = JSON.parse(localStorage.getItem('firebase') ?? '{}')
     const FIREBASE_APP_PATH = 'editor/'
 
     const DEFAULT_TAB_CONFIG = {
@@ -29,21 +21,25 @@
             keyMap: 'sublime',
             theme: 'dracula',
             addons: [
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/keymap/sublime.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/keymap/sublime.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/theme/dracula.min.css',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/search/searchcursor.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/hint/show-hint.min.css',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/hint/show-hint.min.js',
 
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/lint/javascript-lint.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/markdown/markdown.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/javascript/javascript.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/lint/javascript-lint.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/hint/javascript-hint.min.js',
             ]
         },
     }
     
     async function main(){
-
+        
+        // 
+        // Init UI stuff
+        // 
         const spinner = Spinner()
         spinner.render()
         spinner.show()
@@ -52,15 +48,43 @@
         tabContainer.render()
 
 
+        // 
+        // Firebase
+        // 
         const firebase = await Firebase(FIREBASE_CONFIG, FIREBASE_APP_PATH)
-        if (!firebase) return
+        if (!firebase) {
+            alert('Failed to connect to firebase.\nThis App need Firebase to run')
+            
+            createSettingTab()
+            spinner.hide()
+            return
+        }
 
 
-        function createTab(config){
-            config = { ...DEFAULT_TAB_CONFIG, ...(config ?? {}) }
+        // 
+        // Create Tabs
+        // 
+        function createSettingTab(){
+            const settingsTab = tabContainer.create('Settings')
+            const setting = Setting(settingsTab.body)
+
+            if (tabContainer.length() == 1){
+                settingsTab.open()
+            }
+
+            return { tab: settingsTab, setting }
+        }
+        function createEditorTab(config){
             
             const tab = tabContainer.create(config.title ?? 'Untitled')
-            const editor = Editor(config.editor)
+            const editor = Editor({ 
+                ...(DEFAULT_TAB_CONFIG.editor ?? {}), 
+                ...(config.editor ?? {}),
+                addons: [
+                    ...(DEFAULT_TAB_CONFIG.editor.addons), 
+                    ...(config?.editor?.addons ?? [])
+                ]
+            })
 
             function onChange(data) {
                 if (editor.getCodemirror()){
@@ -101,12 +125,17 @@
         }
 
         
-        createTab({ title: 'Editor 1', store: { path: 'editor1' } })
-        createTab({ title: 'Editor 2', store: { path: 'editor2' } })
-        createTab({ title: 'Editor 3', store: { path: 'editor3' } })
-        createTab({ title: 'Editor 4', store: { path: 'editor4' } })
+        createEditorTab({ title: 'Editor 1', store: { path: 'editor1' } })
+        createEditorTab({ 
+            title: 'Editor 2', 
+            editor: { mode: 'text/markdown' }, 
+            store: { path: 'editor2' } 
+        })
+        createEditorTab({ title: 'Editor 3', store: { path: 'editor3' } })
+        createEditorTab({ title: 'Editor 4', store: { path: 'editor4' } })
         
-
+        createSettingTab()
+       
         spinner.hide()
         
     }
@@ -131,6 +160,49 @@
         }
     `)
 
+    // 
+    // Experimental
+    // 
+    function Setting(parent = document.body){
+        
+        const style = `
+        .setting {
+            padding: 2rem;
+            display: grid;
+            color: var(--fg-color);
+        }
+        `
+        Utils.appendStyle(style)
+
+        
+        const container = document.createElement('div')
+        container.setAttribute('class', 'setting')
+        
+        const importFbCredBtn = document.createElement('button')
+        importFbCredBtn.innerHTML = 'Import Cred (.json)'
+        importFbCredBtn.onclick = () => {
+            Utils.inputFile((data) => {
+                const fbCred = JSON.parse(data)
+                localStorage.setItem('firebase', JSON.stringify(fbCred))
+                console.log('loaded firebase cred,', fbCred)
+                location.reload()
+            }, '.json')
+        }
+        container.append(importFbCredBtn)
+
+
+        const fbCredStatus = document.createElement('span')
+        fbCredStatus.innerHTML = 'Firebase Credentials : '
+        fbCredStatus.innerHTML += Object.keys(FIREBASE_CONFIG).length ? 'Installed':'Not Found'
+        container.append(fbCredStatus)
+        
+        
+        parent.append(container)
+
+
+        return container
+        
+    }
 
     main()
 })()

@@ -68,10 +68,11 @@ export function sanitaizeWhitespaces(text){
 
 export function isMobileBrowser(){
     const phones = [
-        'phone', 'pad', 'pod', 'iPhone', 'iPod', 'ios', 'iPad', 'Android', 
-        'Mobile', 'BlackBerry', 'IEMobile', 'MQQBrowser', 'JUC', 'Fennec', 
-        'wOSBrowser', 'BrowserNG', 'WebOS', 'Symbian', 'Windows Phone', 
-    ]
+        'phone|pad|pod|iPhone|iPod|ios|iPad|Android',
+        'Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec',
+        'wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone'
+    ].join('|').split('|')
+
     for (const phone of phones){
         if (navigator.userAgent.indexOf(phone) > -1) return true
     }
@@ -88,7 +89,20 @@ export function txtToList(txt){
 export function ObjLength(object){
     return Object.keys(object).length
 }
-export default { 
-    loadExternal, appendStyle, sanitaizeWhitespaces, 
-    isMobileBrowser, loadTxtList, txtToList, ObjLength
+
+export function inputFile(callback, accept){
+    const fileInput = document.createElement('input')
+    fileInput.accept = accept ?? fileInput.accept
+    fileInput.type = 'file'
+    fileInput.onchange = (e) => readSingleFile(e, callback)
+    fileInput.click()
+}
+// https://stackoverflow.com/questions/3582671/how-to-open-a-local-disk-file-with-javascript
+export function readSingleFile(e, callback) {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => callback(e.target.result)
+    reader.readAsText(file)
 }

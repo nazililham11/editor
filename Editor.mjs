@@ -2,7 +2,7 @@ import { loadExternal, isMobileBrowser } from './utils.mjs'
 
 export function Editor(config){
 
-    const CM_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/'
+    const CM_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/'
     const isMobile = isMobileBrowser()
     
     let addons = [
@@ -31,10 +31,11 @@ export function Editor(config){
     if (config.addons){
         delete config.addons
     }
-
+    
     config = { ...defaultConfig,  ...(config ?? {}) }
     
     async function render(element){
+        
         await libsLoaded
 
         if (element.type === 'textarea'){
